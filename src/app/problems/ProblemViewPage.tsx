@@ -46,18 +46,16 @@ export default function ProblemViewPage() {
   useEffect(() => {
     const fetchProblem = async () => {
       if (!id) return
-      const { data, error } = await supabase
-        .from('problems')
-        .select('*')
-        .eq('id', Number(id))
-        .single()
+      const { data, error } = await supabase.rpc('get_problem_by_id', { 
+        p_id: Number(id) 
+      }).single()
 
       if (error) {
         console.error('Problem fetch error:', error.message)
         return
       }
 
-      setProblem(data)
+      setProblem(data as Problem)
     }
 
     const checkUser = async () => {

@@ -72,11 +72,10 @@ export default function ProblemsetList() {
 
   useEffect(() => {
     const fetchProblems = async () => {
-      const { data, error } = await supabase
-        .from('problems')
-        .select('id, title, difficulty, statement, tags, constrains, examples, created_at')
-        .lt('id', 1_000_000_000)
-        .order('id', { ascending: true })
+      const { data, error } = await supabase.rpc('get_problems', { 
+        p_limit: 10, 
+        p_offset: 0 
+      })
       if (!error && data) setProblems(data)
     }
 

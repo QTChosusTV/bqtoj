@@ -10,6 +10,18 @@ import { getDisplayedElo } from "@/utils/eloAccumulation"
 import { getEloClass, getEloColor } from "@/utils/eloDisplay"
 import { useAuth } from '@/context/AuthContext'
 
+interface Problem {
+  id: number
+  title: string
+  difficulty: number
+  tags: { tagName: string }[]
+  statement: string
+  constrains: string
+  examples: string
+  created_at: string
+  explaination: string
+  time_out: number
+}
 
 type Submission = {
   id: number
@@ -108,12 +120,13 @@ export default function SubmissionsPage() {
       const problemEloMap: Record<number, number> = {}
 
       if (problemIds.length > 0) {
-        const { data: problemsData } = await supabase
-          .from('problems')
-          .select('id, title, difficulty')
-          .in('id', problemIds)
+        const { data: problemsData, error } = await supabase
+          .rpc('get_problems_by_ids', { p_ids: problemIds })
 
-        problemsData?.forEach(p => {
+        // Cast or type it properly
+        const typedProblems = problemsData as Problem[] | null
+
+        typedProblems?.forEach(p => {
           titleMap[p.id] = p.title
           if (p.difficulty) problemEloMap[p.id] = p.difficulty
         })

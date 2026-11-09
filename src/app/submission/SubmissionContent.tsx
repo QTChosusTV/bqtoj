@@ -277,9 +277,8 @@ function SubmissionContent() {
     const fetchProblemMeta = async () => {
       const [{ data: problemData }, { data: tcData }] = await Promise.all([
         supabase
-          .from('problems')
+          .rpc('get_problem_by_id', { p_id: Number(submission.problem_id) })
           .select('tags')
-          .eq('id', submission.problem_id)
           .single(),
         supabase
           .from('testcases')

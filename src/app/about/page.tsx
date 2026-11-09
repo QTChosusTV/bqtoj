@@ -35,10 +35,8 @@ export default function AboutPage() {
         setUsersCount(count)
     }
     const fetchProblemsCount = async () => {
-      const { count, error } = await supabase
-        .from('problems')
-        .select('*', { count: 'exact', head: true })
-        setProblemsCount(count)
+      const { data: count, error } = await supabase.rpc('get_problems_count')
+      if (!error) setProblemsCount(count)
     }
     const fetchContestsCount = async () => {
       const { count, error } = await supabase

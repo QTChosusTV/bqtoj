@@ -401,7 +401,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
 
       const fetchDesc = async () => {
         const { data: descData } = await supabase
-          .from('users')
+          .from('public_users')
           .select('desc')
           .eq('username', uname)
           .single();
@@ -411,7 +411,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
 
       const fetchCodeforcesRating = async () => {
         const { data } = await supabase
-          .from('users')
+          .from('public_users')
           .select('codeforces_handle')
           .eq('username', uname)
           .maybeSingle();
