@@ -19,38 +19,31 @@ function SubmitPageContent() {
   const [submitting, setSubmitting] = useState(false)
   const { username } = useAuth()
 
+  const [error, setError] = useState('')
+
   const handleSubmit = async () => {
-    if (!username || !problemId) {
-      console.error('Missing username or problem ID')
-      return
-    }
-
+    if (!username || !problemId) return 
     setSubmitting(true)
-
+    setError('')
     try {
-      const res = await fetch('https://bqt-submit.anhwaivo.xyz/submit', {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          code,
-          problem_id: problemId,
-          language,
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ code, problem_id: problemId, language }),
       })
-
       const result = await res.json()
-      //console.log("Submit language:", language)
-      //console.log("Submit response:", result)
-      if (!result.id) {
-        //console.error('No submission ID returned')
+      if (!res.ok || !result.id) {
+        setError(result.error ?? 'Submission failed')
         setSubmitting(false)
         return
       }
-
       router.push(`/submission?id=${result.id}`)
-    } catch (err) {
-      //console.error('Error while triggering judge:', err)
+    } catch {
+      setError('Could not reach the judge')
       setSubmitting(false)
     }
   }
