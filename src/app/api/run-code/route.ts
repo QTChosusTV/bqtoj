@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const maxDuration = 60;
+
 interface RunCodeRequest {
   code: string;
   input: string;
@@ -65,49 +67,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const codeExecutionUrl = process.env.CODE_EXECUTION_URL || 'https://78.154.103.30:12731';
-    // console.log('[DEBUG] Fetching from:', `${codeExecutionUrl}/ide`);
+        const judgeUrl = process.env.CODE_EXECUTION_URL || 'http://78.154.103.30:12731';
 
-    const response = await fetch(`${codeExecutionUrl}/ide`, {
+    const response = await fetch(`${judgeUrl}/ide`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,          // the judge verifies the token itself
+      },
       body: JSON.stringify({ code, input, language }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(50_000),
     });
 
-    const responseBody = await response.text();
-    /* onsole.log('[DEBUG] External service response:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: responseBody,
-    });*/
-
-    if (!response.ok) {
-      let errorDetails;
-      try {
-        errorDetails = JSON.parse(responseBody);
-      } catch {
-        errorDetails = { error: response.statusText, message: responseBody };
-      }
-      throw new Error(`External service error: ${errorDetails.error || response.statusText}`);
-    }
-
+    const text = await response.text();
     let result;
     try {
-      result = JSON.parse(responseBody);
-    } catch (e) {
-      // console.log('[DEBUG] Failed to parse external service response:', e);
-      throw new Error('Invalid response from external service');
-    }
-
-    if (!result.success) {
+      result = JSON.parse(text);
+    } catch {
       return NextResponse.json(
-        { success: false, error: result.error || 'Execution failed', message: result.message || '' },
-        { status: 400 }
+        { success: false, error: 'Judge returned an invalid response', message: text.slice(0, 200) },
+        { status: 502 }
       );
     }
-
-    return NextResponse.json(result);
+    // Compile errors, TLE, etc. come back as 400 with a JSON body: pass them through
+    // so the user sees the compiler message instead of a generic 500.
+    return NextResponse.json(result, { status: result.success ? 200 : response.status });
   } catch (error) {
     console.error('[ERROR] Code execution failed:', error);
     return NextResponse.json(

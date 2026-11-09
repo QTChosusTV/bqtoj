@@ -10,6 +10,7 @@ import Link from 'next/link';
 import type { editor } from 'monaco-editor';
 import type { User } from '@supabase/supabase-js';
 
+
 export default function IDEPage() {
   const [selectedLanguage, setSelectedLanguage] = useState('cpp');
   const [code, setCode] = useState(languageTemplates[0].defaultCode);
