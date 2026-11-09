@@ -33,7 +33,12 @@ function SubmitPageContent() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token ?? ''}`,
         },
-        body: JSON.stringify({ code, problem_id: problemId, language }),
+        body: JSON.stringify({
+          code,
+          problem_id: problemId,
+          language,
+          username,
+        }),
       })
       const result = await res.json()
       if (!res.ok || !result.id) {
