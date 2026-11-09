@@ -4,22 +4,26 @@ import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/context/AuthContext'
 
-type Verdict = 'AC' | 'WA' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'PC' | 'OLE' | 'JE' | 'Pending'
+type StatusCode = 'AC' | 'WA' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'PC' | 'OLE' | 'JE' | 'Pending'
 
 type TestResult = {
   test: number
-  status: Verdict
+  status: StatusCode
+  verdict?: string
+  message?: string
   expected?: string
   got?: string
-  message?: string
-  score?: number
+  fraction_correct?: number
+  score?: number // fallback for older submissions
   time: number
   memory_kb: number
 }
 
 interface TestDropdownProps {
-  result: TestResult;
-  isSpecial?: boolean;
+  result: TestResult
+  isSpecial?: boolean
+  isOpen: boolean
+  onToggle: () => void
 }
 
 type Submission = {
@@ -70,7 +74,7 @@ function overallBg(overall: string): string {
   }
 }
 
-function testText(status: Verdict): string {
+function statusText(status: StatusCode): string {
   switch (status) {
     case 'AC': return 'Accepted'
     case 'WA': return 'Wrong Answer'
@@ -86,7 +90,7 @@ function testText(status: Verdict): string {
   }
 }
 
-function testColor(status: Verdict): string {
+function statusColor(status: StatusCode): string {
   switch (status) {
     case 'AC': return 'text-green-400'
     case 'WA': return 'text-red-400'
@@ -102,53 +106,95 @@ function testColor(status: Verdict): string {
   }
 }
 
-function truncate(text: string, maxLength: number = 100) {
-  if (!text) return '';
-  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+function truncate(text: string, maxLength: number = 250) {
+  if (!text) return ''
+  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
 
+function getTestFraction(r: TestResult): number {
+  if (r.fraction_correct !== undefined) return Number(r.fraction_correct)
+  if (r.score !== undefined) return Number(r.score)
+  return r.status === 'AC' ? 1 : 0
+}
 
-function TestDropdown({ result, isSpecial = false }: TestDropdownProps) {
-  const [open, setOpen] = useState(result.status === 'CE' || result.status === 'JE')
+function formatScore(val: number): string {
+  return Number.isInteger(val) ? val.toString() : val.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function TestDropdown({ result, isSpecial = false, isOpen, onToggle }: TestDropdownProps) {
+  const frac = getTestFraction(result)
+  // Verdict is the returned judge message (or "OK" when AC if no custom message was sent)
+  const verdictMessage = result.verdict || result.message || (result.status === 'AC' ? 'OK' : '')
 
   return (
-    <div className="mb-4 rounded-xl bg-gray-800 shadow-md">
+    <div className="mb-3 rounded-xl bg-gray-800 shadow-md">
       <div
-        className={`flex justify-between items-center p-4 ${!isSpecial ? 'cursor-pointer' : ''}`}
-        onClick={!isSpecial ? () => setOpen(!open) : undefined}
+        className={`flex justify-between items-center p-4 ${!isSpecial ? 'cursor-pointer select-none' : ''}`}
+        onClick={!isSpecial ? onToggle : undefined}
       >
-        <p className="text-blue-400 font-semibold">
-          Test #{result.test}:{' '}
-          <span className={testColor(result.status)}>{testText(result.status)}</span>
-        </p>
-        {!isSpecial && (
-          <span
-            className="text-white transition-transform duration-200"
-            style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}
-          >
-            ▶
+        <div className="flex items-center gap-3">
+          <p className="text-blue-400 font-semibold">
+            Test #{result.test}:{' '}
+            <span className={statusColor(result.status)}>{statusText(result.status)}</span>
+          </p>
+          {result.status === 'PC' && (
+            <span className="text-xs px-2 py-0.5 rounded bg-teal-900/60 text-teal-300 font-medium">
+              +{formatScore(frac)} pt
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-400">
+            {Math.round(result.time * 1000 * 100) / 100} ms
+            {result.memory_kb > 0 ? ` · ${result.memory_kb} KB` : ''}
           </span>
-        )}
+          {!isSpecial && (
+            <span
+              className="text-white transition-transform duration-200"
+              style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            >
+              ▶
+            </span>
+          )}
+        </div>
       </div>
 
-      {(!isSpecial && (open)) && (
-        <div className="grid grid-cols-[100px_1fr] gap-2 p-4 border-t border-gray-700">
-          <p className="text-yellow-500">Expected:</p>
-          <span className={testColor(result.status)}>{truncate(result.expected ?? '')}</span>
-          <p className="text-white">Got:</p>
-          <span className={testColor(result.status)}>{truncate(result.got ?? '')}</span>
-          <p className="text-blue-500">Time:</p>
-          <span>{Math.round((result.time * 1000) * 100) / 100} ms</span>
-          {result.score !== undefined && result.status === 'PC' && (
+      {!isSpecial && isOpen && (
+        <div className="grid grid-cols-[110px_1fr] gap-2 p-4 border-t border-gray-700 text-sm">
+          {result.expected !== undefined && (
             <>
-              <p className="text-teal-300">Score:</p>
-              <span>{(result.score * 100).toFixed(2)}%</span>
+              <p className="text-yellow-500 font-medium">Expected:</p>
+              <span className={`font-mono break-all ${statusColor(result.status)}`}>
+                {truncate(result.expected)}
+              </span>
             </>
           )}
-          {result.message && (
+          {result.got !== undefined && (
             <>
-              <p className="text-white">Info:</p>
-              <pre className="whitespace-pre-wrap text-sm text-gray-300">{result.message}</pre>
+              <p className="text-white font-medium">Got:</p>
+              <span className={`font-mono break-all ${statusColor(result.status)}`}>
+                {truncate(result.got)}
+              </span>
+            </>
+          )}
+          <p className="text-blue-400 font-medium">Time:</p>
+          <span>{Math.round(result.time * 1000 * 100) / 100} ms</span>
+
+          <p className="text-purple-400 font-medium">Memory:</p>
+          <span>{result.memory_kb} KB</span>
+
+          <p className="text-teal-300 font-medium">Score:</p>
+          <span>
+            {formatScore(frac)} / 1 ({(frac * 100).toFixed(0)}%)
+          </span>
+
+          {verdictMessage && (
+            <>
+              <p className="text-gray-300 font-medium">Verdict:</p>
+              <pre className="whitespace-pre-wrap font-mono text-sm text-gray-200">
+                {verdictMessage}
+              </pre>
             </>
           )}
         </div>
@@ -165,26 +211,35 @@ function SubmissionContent() {
   const { username, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isSpecial, setIsSpecial] = useState(false)
+  const [totalTests, setTotalTests] = useState<number | null>(null)
+  const [openTest, setOpenTest] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!submissionId) return;
+    if (!submissionId) return
 
     const fetchData = async () => {
       const { data } = await supabase
         .from('submissions')
         .select('*')
         .eq('id', submissionId)
-        .single();
+        .single()
 
-      if (data) setSubmission(data);
-      setLoading(false); 
-    };
+      if (data) {
+        const parsedResults: TestResult[] =
+          typeof data.results === 'string' ? JSON.parse(data.results) : data.results
+        setSubmission({ ...data, results: parsedResults })
 
-    fetchData();
+        // Auto-open CE or JE if present
+        const firstError = parsedResults?.find(r => r.status === 'CE' || r.status === 'JE')
+        if (firstError) setOpenTest(firstError.test)
+      }
+      setLoading(false)
+    }
 
-    // Use unique channel name per submission
+    fetchData()
+
     const channel = supabase
-      .channel(`submission-${submissionId}`)  // ← unique per submission
+      .channel(`submission-${submissionId}`)
       .on(
         'postgres_changes',
         {
@@ -194,88 +249,182 @@ function SubmissionContent() {
           filter: `id=eq.${submissionId}`,
         },
         payload => {
-          console.log('[REALTIME] results type:', typeof payload.new.results)
-          console.log('[REALTIME] results value:', payload.new.results)
-          console.log('[REALTIME] Got update:', payload.new)
           const newSub = payload.new as Submission
+          const parsedResults: TestResult[] =
+            typeof newSub.results === 'string' ? JSON.parse(newSub.results) : newSub.results
+
           setSubmission({
             ...newSub,
-            results: typeof newSub.results === 'string' 
-              ? JSON.parse(newSub.results) 
-              : newSub.results
+            results: parsedResults,
           })
+
+          const firstError = parsedResults?.find(r => r.status === 'CE' || r.status === 'JE')
+          if (firstError) {
+            setOpenTest(prev => (prev === null ? firstError.test : prev))
+          }
         }
-        
       )
-      .subscribe((status) => {
-        console.log('[REALTIME] Channel status:', status)  // ← add this to debug
-      });
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [submissionId]);
+      supabase.removeChannel(channel)
+    }
+  }, [submissionId])
 
   useEffect(() => {
-    if (!submission) return;
+    if (!submission?.problem_id) return
 
-    const fetchSpecialTag = async () => {
-      const { data: problemData } = await supabase
-        .from('problems')
-        .select('tags')
-        .eq('id', submission.problem_id)
-        .single()
+    const fetchProblemMeta = async () => {
+      const [{ data: problemData }, { data: tcData }] = await Promise.all([
+        supabase
+          .from('problems')
+          .select('tags')
+          .eq('id', submission.problem_id)
+          .single(),
+        supabase
+          .from('testcases')
+          .select('num_tests, testcases')
+          .eq('problem_id', submission.problem_id)
+          .single(),
+      ])
 
       if (problemData && Array.isArray(problemData.tags)) {
-        setIsSpecial((problemData.tags as { tagName: string }[]).some(t => t.tagName === 'special'))
+        setIsSpecial(
+          (problemData.tags as { tagName: string }[]).some(t => t.tagName === 'special')
+        )
+      }
+
+      if (tcData) {
+        const count =
+          Array.isArray(tcData.testcases) && tcData.testcases.length > 0
+            ? tcData.testcases.length
+            : Number(tcData.num_tests || 0)
+        if (count > 0) setTotalTests(count)
       }
     }
 
-    fetchSpecialTag()
-  }, [submission])
+    fetchProblemMeta()
+  }, [submission?.problem_id])
 
   useEffect(() => {
     if (submission?.overall === 'Judging...' || submission?.overall === 'Pending') {
       window.scrollBy({ top: 120, behavior: 'smooth' })
     }
-  }, [submission?.results?.length])
+  }, [submission?.results?.length, submission?.overall])
 
   if (loading || authLoading) return <p className="p-6">Loading...</p>
   if (!submission) return <p className="p-6 text-red-500">Submission not found.</p>
 
-  // Only check permission once both are fully loaded
-  if ((!authLoading && username && submission.username !== username)) {
-    return <p className="p-6 text-red-400 font-bold">You don&apos;t have permission to view this submission.</p>
+  if (!authLoading && username && submission.username !== username) {
+    return (
+      <p className="p-6 text-red-400 font-bold">
+        You don&apos;t have permission to view this submission.
+      </p>
+    )
   }
+
+  const results = submission.results ?? []
+  const isCompileOrJudgeError =
+    results.length === 1 && (results[0].status === 'CE' || results[0].status === 'JE')
+
+  const earnedScore = results.reduce((sum, r) => sum + getTestFraction(r), 0)
+  const maxScore = totalTests ?? (isCompileOrJudgeError ? 0 : results.length)
+
+  const maxTimeMs =
+    submission.time > 0
+      ? Math.round(submission.time * 1000 * 100) / 100
+      : results.length > 0
+      ? Math.round(Math.max(...results.map(r => r.time || 0)) * 1000 * 100) / 100
+      : 0
+
+  const maxMemKb =
+    submission.memory_kb > 0
+      ? submission.memory_kb
+      : results.length > 0
+      ? Math.max(...results.map(r => r.memory_kb || 0))
+      : 0
 
   return (
     <main className="max-w-4xl mx-auto p-6">
       <h1 className="text-xl font-bold mb-4">Submission #{submission.id}</h1>
 
-      <div className="mb-4"><strong>Username:</strong> {submission.username}</div>
-      <div className="mb-4"><strong>Problem ID:</strong> {submission.problem_id}</div>
-      <div className="mb-4">
-        <strong>Status:</strong>{' '}
-        <span className={`px-2 py-1 rounded font-semibold ${overallColor(submission.overall)}`}>
-          {submission.overall}
-        </span>
+      {/* Grouped Status & Metrics Block */}
+      <div className="mb-6 rounded-xl bg-gray-800/80 border border-gray-700 p-4 shadow-md grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Username</p>
+          <p className="font-semibold text-white mt-0.5">{submission.username}</p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Problem ID</p>
+          <p className="font-semibold text-white mt-0.5">{submission.problem_id}</p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Status</p>
+          <span className={`inline-block mt-0.5 font-bold ${overallColor(submission.overall)}`}>
+            {submission.overall}
+          </span>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Score</p>
+          <p className="font-semibold text-white mt-0.5">
+            {maxScore > 0 ? (
+              <>
+                <span className={overallColor(submission.overall)}>
+                  {formatScore(earnedScore)}
+                </span>{' '}
+                / {maxScore}{' '}
+                <span className="text-xs text-gray-400 font-normal">
+                  ({((earnedScore / maxScore) * 100).toFixed(1)}%)
+                </span>
+              </>
+            ) : (
+              <span className="text-gray-400">—</span>
+            )}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Max Time</p>
+          <p className="font-semibold text-white mt-0.5">{maxTimeMs} ms</p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Max Memory</p>
+          <p className="font-semibold text-white mt-0.5">
+            {maxMemKb > 0 ? `${(maxMemKb / 1024).toFixed(2)} MB (${maxMemKb} KB)` : '0 KB'}
+          </p>
+        </div>
       </div>
 
-      <pre className={`whitespace-pre-wrap text-white p-4 rounded mt-2 text-sm shadow-inner ${overallBg(submission.overall)}`} style={{ marginBottom: 20 }}>
+      <pre
+        className={`whitespace-pre-wrap text-white p-4 rounded-xl mt-2 text-sm shadow-inner ${overallBg(
+          submission.overall
+        )}`}
+        style={{ marginBottom: 20 }}
+      >
         {submission.code}
       </pre>
 
-      {/* Live test results */}
-      {submission.results && submission.results.length > 0 && (
-        submission.results.map((r) => (
-          <TestDropdown key={r.test} result ={r} isSpecial={isSpecial} />
-        ))
-      )}
+      {/* Live test results (only one open at a time) */}
+      {results.length > 0 &&
+        results.map(r => (
+          <TestDropdown
+            key={r.test}
+            result={r}
+            isSpecial={isSpecial}
+            isOpen={openTest === r.test}
+            onToggle={() => setOpenTest(prev => (prev === r.test ? null : r.test))}
+          />
+        ))}
 
       {/* Show which test is currently being judged */}
       {(submission.overall === 'Judging...' || submission.overall === 'Pending') && (
         <div className="mb-4 rounded-xl bg-gray-800 shadow-md p-4 text-blue-400 animate-pulse">
-          ⏳ Judging test {(submission.results?.length ?? 0) + 1}...
+          ⏳ Judging test {results.length + 1}
+          {maxScore > 0 ? ` of ${maxScore}` : ''}...
         </div>
       )}
     </main>
