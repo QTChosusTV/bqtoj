@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const codeExecutionUrl = process.env.CODE_EXECUTION_URL || 'https://bqt-submit.anhwaivo.xyz';
+    const codeExecutionUrl = process.env.CODE_EXECUTION_URL || 'https://78.154.103.30:12731';
     // console.log('[DEBUG] Fetching from:', `${codeExecutionUrl}/ide`);
 
     const response = await fetch(`${codeExecutionUrl}/ide`, {
