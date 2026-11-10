@@ -1,16 +1,43 @@
 // app/post-register/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 
 export default function PostRegisterPage() {
   const [username, setUsername] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    // 1. Check existing session or URL hash/code
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setCurrentUser(session.user)
+      }
+      setAuthChecking(false)
+    }
+
+    initSession()
+
+    // 2. Listen for auth state change when redirected from email link
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(session.user)
+        setError('')
+      }
+      setAuthChecking(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleFinalizeAccount = async () => {
     setError('')
@@ -29,13 +56,13 @@ export default function PostRegisterPage() {
 
     setLoading(true)
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser()
-      if (userError || !userData?.user) {
-        setError('You are not logged in. Please log in first.')
+      const user = currentUser ?? (await supabase.auth.getUser()).data.user
+      if (!user) {
+        setError('You are not logged in. Please log in at /login first, then return to /post-register.')
         return
       }
 
-      const { id, email } = userData.user
+      const { id, email } = user
       if (!email) {
         setError('Email missing from user data.')
         return
@@ -50,17 +77,18 @@ export default function PostRegisterPage() {
 
       if (existingUser) {
         setMessage('Account already set up! Redirecting...')
-        setTimeout(() => router.push('/'), 1500)
+        setTimeout(() => { window.location.href = '/' }, 1200)
         return
       }
 
-      // Check username taken in users or leaderboard table
-      const [{ data: dupUser }, { data: dupLeaderboard }] = await Promise.all([
-        supabase.from('users').select('id').eq('username', trimmed).maybeSingle(),
-        supabase.from('leaderboard').select('username').eq('username', trimmed).maybeSingle(),
-      ])
+      // Check username taken in leaderboard table (publicly readable)
+      const { data: dupLeaderboard } = await supabase
+        .from('leaderboard')
+        .select('username')
+        .eq('username', trimmed)
+        .maybeSingle()
 
-      if (dupUser || dupLeaderboard) {
+      if (dupLeaderboard) {
         setError('This username is already taken. Please choose another.')
         return
       }
@@ -78,7 +106,7 @@ export default function PostRegisterPage() {
       setMessage('Welcome! Your account is all set. Redirecting...')
       setUsername('')
       setTimeout(() => {
-        window.location.href = '/' // Full reload so AuthContext refreshes username immediately
+        window.location.href = '/'
       }, 1200)
     } finally {
       setLoading(false)
@@ -90,30 +118,46 @@ export default function PostRegisterPage() {
       <h1 className="text-2xl font-bold mb-2">Finalize Account</h1>
       <p className="text-gray-400 text-sm mb-6">Choose a username to complete your registration.</p>
 
-      <div className="space-y-4">
-        <input
-          className="w-full p-2 border border-gray-600 rounded bg-gray-900 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-          type="text"
-          placeholder="Choose your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !loading && handleFinalizeAccount()}
-          disabled={loading}
-          maxLength={20}
-        />
-        <button
-          onClick={handleFinalizeAccount}
-          className={`w-full py-2 rounded font-semibold transition-colors ${
-            loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-          } text-white`}
-          disabled={loading}
-        >
-          {loading ? 'Processing...' : 'Complete Setup'}
-        </button>
+      {authChecking ? (
+        <p className="text-gray-400 text-sm">Verifying your email session...</p>
+      ) : !currentUser ? (
+        <div className="space-y-3">
+          <p className="text-yellow-400 text-sm">
+            Your email is confirmed, but no active session was detected in this tab. Please log in with your email and password to pick your username:
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            className="w-full py-2 rounded font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Go to Login
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <input
+            className="w-full p-2 border border-gray-600 rounded bg-gray-900 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+            type="text"
+            placeholder="Choose your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && handleFinalizeAccount()}
+            disabled={loading}
+            maxLength={20}
+          />
+          <button
+            onClick={handleFinalizeAccount}
+            className={`w-full py-2 rounded font-semibold transition-colors ${
+              loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+            } text-white`}
+            disabled={loading}
+          >
+            {loading ? 'Processing...' : 'Complete Setup'}
+          </button>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        {message && <p className="text-green-400 text-sm">{message}</p>}
-      </div>
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {message && <p className="text-green-400 text-sm">{message}</p>}
+        </div>
+      )}
     </main>
   )
 }
