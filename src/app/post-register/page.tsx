@@ -1,3 +1,4 @@
+// app/post-register/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -21,7 +22,6 @@ export default function PostRegisterPage() {
       return
     }
 
-    // Basic username validation
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(trimmed)) {
       setError('Username must be 3–20 characters, letters, numbers, or underscores only.')
       return
@@ -54,31 +54,18 @@ export default function PostRegisterPage() {
         return
       }
 
-      // Check username taken in users table
-      const { data: dupUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', trimmed)
-        .maybeSingle()
+      // Check username taken in users or leaderboard table
+      const [{ data: dupUser }, { data: dupLeaderboard }] = await Promise.all([
+        supabase.from('users').select('id').eq('username', trimmed).maybeSingle(),
+        supabase.from('leaderboard').select('username').eq('username', trimmed).maybeSingle(),
+      ])
 
-      if (dupUser) {
+      if (dupUser || dupLeaderboard) {
         setError('This username is already taken. Please choose another.')
         return
       }
 
-      // Check username taken in leaderboard table
-      const { data: dupLeaderboard } = await supabase
-        .from('leaderboard')
-        .select('username')
-        .eq('username', trimmed)
-        .maybeSingle()
-
-      if (dupLeaderboard) {
-        setError('This username is already taken. Please choose another.')
-        return
-      }
-
-      // Insert into users
+      // Insert into users (the DB trigger on_user_created_leaderboard automatically creates the leaderboard row)
       const { error: insertError } = await supabase
         .from('users')
         .insert([{ id, email, username: trimmed }])
@@ -88,20 +75,11 @@ export default function PostRegisterPage() {
         return
       }
 
-      // Insert into leaderboard
-      const { error: leadError } = await supabase
-        .from('leaderboard')
-        .insert([{ username: trimmed, history: [], elo: 0 }])
-
-      if (leadError) {
-        setError('User created, but failed to add to leaderboard: ' + leadError.message)
-        return
-      }
-
       setMessage('Welcome! Your account is all set. Redirecting...')
       setUsername('')
-      setTimeout(() => router.push('/'), 1500)
-
+      setTimeout(() => {
+        window.location.href = '/' // Full reload so AuthContext refreshes username immediately
+      }, 1200)
     } finally {
       setLoading(false)
     }

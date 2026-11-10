@@ -66,18 +66,13 @@ export default function ProblemsetList() {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const id = user.id
-        const email = user.email ?? null
         const { data: userData } = await supabase
-          .from("users").select("username").eq("id", id).single()
+          .from("users")
+          .select("username")
+          .eq("id", user.id)
+          .maybeSingle()
 
-        if (!userData) {
-          const generatedUsername = email?.split("@")[0] ?? "user"
-          await supabase.from("users").insert([{ id, email, username: generatedUsername }])
-          setUsername(generatedUsername)
-        } else {
-          setUsername(userData.username ?? null)
-        }
+        setUsername(userData?.username ?? null)
       }
       setUserReady(true)
     }
@@ -89,7 +84,9 @@ export default function ProblemsetList() {
     if (!username) return
     const fetchSubmissions = async () => {
       const { data, error } = await supabase
-        .from('submissions').select('problem_id, overall').eq('username', username)
+        .from('public_submissions')
+        .select('problem_id, overall')
+        .eq('username', username)
       if (!error && data) {
         const solved = new Set<number>()
         const submitted = new Set<number>()

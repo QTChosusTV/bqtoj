@@ -101,44 +101,46 @@ export default function ContestProblemset() {
         .eq('id', user.id)
         .single()
 
-      if (!userData) return
+      if (!userData || !userData.current_contest_id || userData.current_contest_id === 0) return
 
-      if (userData.current_contest_id && userData.current_contest_id !== 0) {
-        setContestId(userData.current_contest_id)
+      setContestId(userData.current_contest_id)
 
-        const { data: contest } = await supabase
-          .from('contests')
-          .select('problems, id, time_start, time_end, elo_min, elo_max, name, link, descriptions')
-          .eq('id', userData.current_contest_id)
-          .single()
+      const { data: contestData } = await supabase
+        .from('contests')
+        .select('problems, id, time_start, time_end, elo_min, elo_max, name, link, descriptions')
+        .eq('id', userData.current_contest_id)
+        .single()
 
-        if (!contest?.problems) return
+      if (!contestData) return
+      setContest(contestData)
 
-        const problemIds = contest.problems.map((p: any) => p.pid)
+      // Do NOT fetch problem details if the contest hasn't started yet
+      const startMs = contestData.time_start ? new Date(contestData.time_start).getTime() : 0
+      if (Date.now() < startMs || !contestData.problems) return
 
-        const { data: problems } = await supabase
-          .from('problems')
-          .select('id, title, difficulty, tags, created_at')
-          .in('id', problemIds)
+      const problemIds = contestData.problems.map((p: any) => p.pid)
 
-        if (!problems) return
+      const { data: problems } = await supabase
+        .from('problems')
+        .select('id, title, difficulty, tags, created_at')
+        .in('id', problemIds)
 
-        const ordered = contest.problems
-          .map((contestProblem: { pid: number; pname: string }) => {
-            const problem = problems.find((p: DatabaseProblem) => p.id === contestProblem.pid)
-            if (problem) {
-              return {
-                ...problem,
-                pname: contestProblem.pname
-              } as Problem
-            }
-            return null
-          })
-          .filter(Boolean) as Problem[]
+      if (!problems) return
 
+      const ordered = contestData.problems
+        .map((contestProblem: { pid: number; pname: string }) => {
+          const problem = problems.find((p: DatabaseProblem) => p.id === contestProblem.pid)
+          if (problem) {
+            return {
+              ...problem,
+              pname: contestProblem.pname
+            } as Problem
+          }
+          return null
+        })
+        .filter(Boolean) as Problem[]
 
-        setContestProblems(ordered)
-      }
+      setContestProblems(ordered)
     }
 
     init()

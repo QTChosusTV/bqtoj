@@ -1,3 +1,4 @@
+// app/submission/SubmissionContent.tsx
 'use client'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
@@ -22,6 +23,7 @@ type TestResult = {
 interface TestDropdownProps {
   result: TestResult
   isSpecial?: boolean
+  canViewExpected: boolean
   isOpen: boolean
   onToggle: () => void
 }
@@ -30,6 +32,7 @@ type Submission = {
   id: string
   username: string
   problem_id: string
+  contest_id?: number | null
   code: string
   language: string
   created_at: string
@@ -106,7 +109,7 @@ function statusColor(status: StatusCode): string {
   }
 }
 
-function truncate(text: string, maxLength: number = 250) {
+function truncate(text: string, maxLength: number = 500) {
   if (!text) return ''
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
@@ -121,9 +124,8 @@ function formatScore(val: number): string {
   return Number.isInteger(val) ? val.toString() : val.toFixed(2).replace(/\.?0+$/, '')
 }
 
-function TestDropdown({ result, isSpecial = false, isOpen, onToggle }: TestDropdownProps) {
+function TestDropdown({ result, isSpecial = false, canViewExpected, isOpen, onToggle }: TestDropdownProps) {
   const frac = getTestFraction(result)
-  // Verdict is the returned judge message (or "OK" when AC if no custom message was sent)
   const verdictMessage = result.verdict || result.message || (result.status === 'AC' ? 'OK' : '')
 
   return (
@@ -162,11 +164,11 @@ function TestDropdown({ result, isSpecial = false, isOpen, onToggle }: TestDropd
 
       {!isSpecial && isOpen && (
         <div className="grid grid-cols-[110px_1fr] gap-2 p-4 border-t border-gray-700 text-sm">
-          {result.expected !== undefined && (
+          {canViewExpected && result.expected !== undefined && (
             <>
               <p className="text-yellow-500 font-medium">Expected:</p>
               <span className={`font-mono break-all ${statusColor(result.status)}`}>
-                {truncate(result.expected)}
+                {truncate(result.expected, 500)}
               </span>
             </>
           )}
@@ -174,7 +176,7 @@ function TestDropdown({ result, isSpecial = false, isOpen, onToggle }: TestDropd
             <>
               <p className="text-white font-medium">Got:</p>
               <span className={`font-mono break-all ${statusColor(result.status)}`}>
-                {truncate(result.got)}
+                {truncate(result.got, 500)}
               </span>
             </>
           )}
@@ -208,10 +210,9 @@ function SubmissionContent() {
   const submissionId = searchParams.get('id')
 
   const [submission, setSubmission] = useState<Submission | null>(null)
-  const { username, loading: authLoading } = useAuth()
+  const { username, currentContestId, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isSpecial, setIsSpecial] = useState(false)
-  const [totalTests, setTotalTests] = useState<number | null>(null)
   const [openTest, setOpenTest] = useState<number | null>(null)
 
   useEffect(() => {
@@ -275,30 +276,15 @@ function SubmissionContent() {
     if (!submission?.problem_id) return
 
     const fetchProblemMeta = async () => {
-      const [{ data: problemData }, { data: tcData }] = await Promise.all([
-        supabase
-          .rpc('get_problem_by_id', { p_id: Number(submission.problem_id) })
-          .select('tags')
-          .single(),
-        supabase
-          .from('testcases')
-          .select('num_tests, testcases')
-          .eq('problem_id', submission.problem_id)
-          .single(),
-      ])
+      const { data: problemData } = await supabase
+        .rpc('get_problem_by_id', { p_id: Number(submission.problem_id) })
+        .select('tags')
+        .single()
 
       if (problemData && Array.isArray(problemData.tags)) {
         setIsSpecial(
           (problemData.tags as { tagName: string }[]).some(t => t.tagName === 'special')
         )
-      }
-
-      if (tcData) {
-        const count =
-          Array.isArray(tcData.testcases) && tcData.testcases.length > 0
-            ? tcData.testcases.length
-            : Number(tcData.num_tests || 0)
-        if (count > 0) setTotalTests(count)
       }
     }
 
@@ -322,12 +308,16 @@ function SubmissionContent() {
     )
   }
 
+  // Only allow viewing expected output when practicing (current_contest_id == 0 and submission wasn't made in a contest)
+  const canViewExpected =
+    (currentContestId ?? 0) === 0 && (submission.contest_id ?? 0) === 0
+
   const results = submission.results ?? []
   const isCompileOrJudgeError =
     results.length === 1 && (results[0].status === 'CE' || results[0].status === 'JE')
 
   const earnedScore = results.reduce((sum, r) => sum + getTestFraction(r), 0)
-  const maxScore = totalTests ?? (isCompileOrJudgeError ? 0 : results.length)
+  const maxScore = isCompileOrJudgeError ? 0 : results.length
 
   const maxTimeMs =
     submission.time > 0
@@ -414,6 +404,7 @@ function SubmissionContent() {
             key={r.test}
             result={r}
             isSpecial={isSpecial}
+            canViewExpected={canViewExpected}
             isOpen={openTest === r.test}
             onToggle={() => setOpenTest(prev => (prev === r.test ? null : r.test))}
           />

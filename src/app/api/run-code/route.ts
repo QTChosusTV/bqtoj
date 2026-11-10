@@ -1,3 +1,4 @@
+// app/api/run-code/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -5,7 +6,7 @@ export const maxDuration = 60;
 
 interface RunCodeRequest {
   code: string;
-  input: string;
+  input?: string;
   language: 'cpp' | 'c' | 'python' | 'java';
 }
 
@@ -17,21 +18,17 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // console.log('[DEBUG] Request headers:', Object.fromEntries(request.headers));
-
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // console.log('[DEBUG] Missing or invalid Authorization header');
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.replace('Bearer ', '').trim();
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
-      // console.log('[DEBUG] Supabase auth error:', error?.message);
       return NextResponse.json(
         { success: false, error: 'Invalid or expired session', message: error?.message },
         { status: 401 }
@@ -41,18 +38,15 @@ export async function POST(request: NextRequest) {
     let body: RunCodeRequest;
     try {
       body = await request.json();
-      // console.log('[DEBUG] Request body:', body);
-    } catch (e) {
-      // console.log('[DEBUG] Failed to parse request body:', e);
+    } catch {
       return NextResponse.json(
         { success: false, error: 'Invalid JSON payload' },
         { status: 400 }
       );
     }
 
-    const { code, input, language } = body;
+    const { code, input = '', language } = body;
     if (!code || !language || !['cpp', 'c', 'python', 'java'].includes(language)) {
-      // console.log('[DEBUG] Invalid parameters:', { code, input, language });
       return NextResponse.json(
         { success: false, error: 'Invalid or missing parameters' },
         { status: 400 }
@@ -60,20 +54,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (code.length > 1_000_000 || input.length > 100_000) {
-      // console.log('[DEBUG] Payload too large:', { codeLength: code.length, inputLength: input.length });
       return NextResponse.json(
         { success: false, error: 'Code or input exceeds size limit' },
         { status: 400 }
       );
     }
 
-        const judgeUrl = process.env.CODE_EXECUTION_URL || 'http://78.154.103.30:12731';
+    const judgeUrl = process.env.CODE_EXECUTION_URL || process.env.JUDGE_URL;
+    if (!judgeUrl) {
+      return NextResponse.json(
+        { success: false, error: 'Code execution service is not configured' },
+        { status: 500 }
+      );
+    }
 
     const response = await fetch(`${judgeUrl}/ide`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: authHeader,          // the judge verifies the token itself
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ code, input, language }),
       signal: AbortSignal.timeout(50_000),
@@ -89,8 +88,7 @@ export async function POST(request: NextRequest) {
         { status: 502 }
       );
     }
-    // Compile errors, TLE, etc. come back as 400 with a JSON body: pass them through
-    // so the user sees the compiler message instead of a generic 500.
+
     return NextResponse.json(result, { status: result.success ? 200 : response.status });
   } catch (error) {
     console.error('[ERROR] Code execution failed:', error);

@@ -416,16 +416,17 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
           .eq('username', uname)
           .maybeSingle();
 
-      
-        // console.log(data)
-
-        if (data?.codeforces_handle) {
-          setHandle(data?.codeforces_handle);
+        if (!data?.codeforces_handle) {
+          setHandle('');
+          setCFElo('Unrated');
+          return;
         }
+
+        setHandle(data.codeforces_handle);
 
         try {
           const res = await fetch(
-            `https://codeforces.com/api/user.info?handles=${data?.codeforces_handle}`
+            `https://codeforces.com/api/user.info?handles=${encodeURIComponent(data.codeforces_handle)}`
           );
           const json = await res.json();
 
@@ -444,14 +445,15 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
       fetchHistory();
       fetchCodeforcesRating();
       fetchDesc();
-    }, []);
+    }, [searchParams]);
 
     useEffect(() => {
       const fetchSolved = async () => {
         if (!username) return;
 
+        // Query public_submissions so solved problems load for ANY user profile
         const { data: subs } = await supabase
-          .from("submissions")
+          .from("public_submissions")
           .select("problem_id")
           .eq("username", username)
           .eq("overall", "Accepted")
@@ -467,21 +469,21 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
               id,
               elo: probs.find((p) => p.id === id)?.difficulty ?? 0,
             }))
-            .sort((a, b) => a.elo - b.elo); // optional: remove if you don’t want sorting
+            .sort((a, b) => a.elo - b.elo);
 
           setSolvedProblems(new Set(solved.map((s) => s.id)));
           setSolvedElos(solved);
 
-          try {
-            const estimate = estimateUserElo(solved.map(s => s.elo));
-            setUserElo(Math.round(estimate.elo + estimate.sd));
-            console.log("Estimated Elo:", estimate.elo + estimate.sd);
-          } catch (err) {
-            console.error("Elo estimation failed:", err);
+          if (solved.length > 0) {
+            try {
+              const estimate = estimateUserElo(solved.map(s => s.elo));
+              setUserElo(Math.round(estimate.elo + estimate.sd));
+            } catch (err) {
+              console.error("Elo estimation failed:", err);
+            }
+          } else {
+            setUserElo(null);
           }
-          //console.log("subs", subs);
-          //console.log("probs", probs);
-          //console.log("elos", elos);
         }
       };
 

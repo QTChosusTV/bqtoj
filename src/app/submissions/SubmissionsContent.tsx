@@ -1,3 +1,5 @@
+// submissions/SubmissionsContent.tsx
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -74,7 +76,7 @@ export default function SubmissionsPage() {
 
       // fetch submissions
       const { data: subsData, error } = await supabase
-        .from("submissions")
+        .from("public_submissions")
         .select(`
           id,
           username,

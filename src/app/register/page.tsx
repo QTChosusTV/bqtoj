@@ -1,51 +1,32 @@
+// app/register/page.tsx
 'use client'
 
 import { useState, FormEvent } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import dynamic from 'next/dynamic';
 import React from 'react';
-const CapWidget = dynamic(() => import('@pitininja/cap-react-widget').then((mod) => mod.CapWidget), {
-  ssr: false,
-});
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setLoading(true);
 
-    /*if (!captchaToken) {
-      setError('Please complete the CAPTCHA.');
-      return;
-    }*/
-
-    //try {
-      /*const response = await fetch('/api/verify-captcha', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ response: captchaToken }),
-      });
-      */
-      //const result = await response.json();
-
-      /*if (!result.success) {
-        setError('CAPTCHA verification failed. Please try again.');
-        return;
-      }*/
+    try {
+      const redirectOrigin =
+        typeof window !== 'undefined' ? window.location.origin : 'https://bqtoj.vercel.app';
 
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: 'https://bqt-leaderboard.vercel.app/post-register',
+          emailRedirectTo: `${redirectOrigin}/post-register`,
         },
       });
 
@@ -60,10 +41,12 @@ export default function RegisterPage() {
       }
 
       setSuccess('Check your Gmail and confirm before continuing setup!');
-    //} catch (err) {
-    //  setError('An error occurred during registration. Please try again.');
-    //  console.error(err);
-    //}
+    } catch (err) {
+      setError('An error occurred during registration. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,31 +69,22 @@ export default function RegisterPage() {
           <input
             className="w-full p-2 border rounded"
             type="password"
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col items-center">
-          {/*<CapWidget
-            endpoint="https://capdashboard.anhwaivo.xyz/ee25efb360/"
-            theme="dark"
-            onSolve={(token: string) => {
-              setCaptchaToken(token);
-            }}
-            onError={(message: string) => {
-              setError(`Captcha error: ${message}`);
-              setCaptchaToken(null);
-            }}
-          />*/}
           {error && <p className="text-red-500 text-sm">{error}</p>}
           {success && <p className="text-green-600 text-sm">{success}</p>}
         </div>
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
         >
-          Register
+          {loading ? 'Registering...' : 'Register'}
         </button>
       </form>
     </main>

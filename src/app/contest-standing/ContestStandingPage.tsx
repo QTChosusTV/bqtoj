@@ -212,7 +212,8 @@ export default function ContestStandingPage() {
       if (b.score !== a.score) return b.score - a.score;
       return a.penalty - b.penalty;
     }));
-    setProblems(contestData?.problems || [])
+    const startMs = contest?.time_start ? new Date(contest.time_start).getTime() : 0
+    setProblems(Date.now() >= startMs ? (contestData?.problems || []) : [])
   }
   fetchStanding()
 }, [contestId, contest])
