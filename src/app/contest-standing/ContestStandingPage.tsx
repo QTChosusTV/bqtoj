@@ -1,3 +1,5 @@
+// ContestStandingPage.tsx
+
 'use client'
 export const dynamic = 'force-dynamic'
 
@@ -498,7 +500,7 @@ export default function ContestStandingPage() {
                       <strong>{s.score}</strong>
                     </td>
                     <td className="px-1 py-2 text-center border text-yellow-400">
-                      {contest?.format === 'icpc' ? formatPenalty(s.penalty) : s.penalty}
+                      {formatPenalty(s.penalty)}
                     </td>
                     {(now <= timeEnd) && (
                       <>
