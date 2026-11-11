@@ -451,13 +451,15 @@ export default function ContestStandingPage() {
                     )}
                     {problems.map((p, idx) => {
                       const info = s.problems?.[p.pid]
-                      const isFullScore = info?.score !== undefined && info.score === (p.score ?? 100)
-                      const colScore = p.score / (isFullScore ? 1 : 1.4)
+                      const isIOI = ['ioi', 'oi'].includes((contest?.format ?? '').toLowerCase())
+                      const maxScore = p.score ?? 100
+                      const hasScore = isIOI || info?.score !== undefined
+                      const numScore = Number(info?.score ?? 0)
+                      const isFullScore = hasScore ? numScore >= maxScore : info?.verdict === 'AC'
 
                       let color = "white"
-
-                      if (info?.score !== undefined) {
-                        color = getScoreGradient(info.score, (p.score ?? 100) * 0.75)
+                      if (hasScore && info?.tries > 0) {
+                        color = numScore > 0 ? getScoreGradient(numScore, maxScore * 0.75) : "red"
                       } else if (info?.verdict === 'AC') {
                         color = "green"
                       } else if (info?.tries > 0) {
@@ -473,22 +475,20 @@ export default function ContestStandingPage() {
                           {info?.tries > 0 ? (
                             <div className="flex flex-col items-center">
                               <span className={isFullScore ? "font-bold italic" : "font-medium text-sm italic"}>
-                                {(() => {
-                                  if (info?.verdict === "AC")
-                                    return "+" + ((info?.tries ?? 1) > 1 ? info.tries - 1 : "")
-                                  if (info?.score !== undefined && info.score > 0)
-                                    return "" + Math.round(info.score)
-                                  if (info?.tries)
-                                    return "-" + info.tries
-                                  return ""
-                                })()}
+                                {hasScore ? (
+                                  `${Math.round(numScore)}`
+                                ) : info?.verdict === "AC" ? (
+                                  "+" + ((info?.tries ?? 1) > 1 ? info.tries - 1 : "")
+                                ) : (
+                                  "-" + info.tries
+                                )}
                               </span>
-                              {(info?.verdict === 'AC' || (info?.score !== undefined && info.score > 0)) && (
+                              {(hasScore ? numScore > 0 : info?.verdict === 'AC') && (
                                 <span
                                   className="text-xs"
                                   style={{ color: getSolveTimeGradient(info.time, contest?.time_start ?? null, contest?.time_end ?? null) }}
                                 >
-                                  <strong>{formatSolveTime(info.time, contest?.time_start ?? null)}</strong>
+                                  <strong>{formatPenalty(info.penalty ?? 0)}</strong>
                                 </span>
                               )}
                             </div>
