@@ -4,9 +4,9 @@ import type { NextConfig } from "next";
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://va.vercel-scripts.com;
-  style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
-  font-src 'self' data: https://cdn.jsdelivr.net;
+  font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com;
   connect-src 'self' https://*.supabase.co wss://*.supabase.co https://codeforces.com https://cdn.jsdelivr.net https://capdashboard.anhwaivo.xyz;
   worker-src 'self' blob:;
   frame-ancestors 'none';

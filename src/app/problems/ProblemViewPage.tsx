@@ -9,6 +9,13 @@ import ExplanationRenderer from "./ExplanationRenderer";
 import { BlockMath, InlineMath } from 'react-katex'
 import { getEloClass, getEloColor } from "@/utils/eloDisplay"
 
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import remarkBreaks from 'remark-breaks'
+import 'katex/dist/katex.min.css'
+
 interface Problem {
   id: number
   title: string
@@ -31,6 +38,37 @@ const renderInlineWithLatex = (text: string, keyPrefix = '') => {
     }
     return <span key={`${keyPrefix}-text-${index}`}>{part}</span>
   })
+}
+
+const markdownComponents = {
+  table: ({ children, ...props }: any) => (
+    <div className="overflow-x-auto my-4">
+      <table
+        className="border-collapse border border-gray-500 w-full text-sm"
+        {...props}
+      >
+        {children}
+      </table>
+    </div>
+  ),
+
+  th: ({ children, ...props }: any) => (
+    <th
+      className="border border-gray-500 px-3 py-2 bg-gray-700 font-semibold text-left"
+      {...props}
+    >
+      {children}
+    </th>
+  ),
+
+  td: ({ children, ...props }: any) => (
+    <td
+      className="border border-gray-500 px-3 py-2"
+      {...props}
+    >
+      {children}
+    </td>
+  ),
 }
 
 export default function ProblemViewPage() {
@@ -156,46 +194,24 @@ export default function ProblemViewPage() {
 
       <section className="mb-6">
         <h2 className="text-lg font-semibold">Problem Statement</h2>
-        {problem.statement.split('\n').map((line, i) => {
-          const trimmed = line.trim()
-
-          if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
-            const latex = trimmed.slice(2, -2).trim()
-            return (
-              <div key={i} className="text-left">
-                <BlockMath math={latex} />
-              </div>
-            )
-          }
-
-          return (
-            <p key={i} className="whitespace-pre-wrap">
-              {renderInlineWithLatex(line, `stmt-${i}`)}
-            </p>
-          )
-        })}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+          rehypePlugins={[rehypeKatex]}
+          components={markdownComponents}
+        >
+          {problem.statement}
+        </ReactMarkdown>
       </section>
 
       <section className="mb-6">
         <h2 className="text-lg font-semibold">Constraints</h2>
-        {problem.constrains.split('\n').map((line, i) => {
-          const trimmed = line.trim()
-
-          if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
-            const latex = trimmed.slice(2, -2).trim()
-            return (
-              <div key={i} className="text-left">
-                <BlockMath math={latex} />
-              </div>
-            )
-          }
-
-          return (
-            <p key={i} className="whitespace-pre-wrap">
-              {renderInlineWithLatex(line, `con-${i}`)}
-            </p>
-          )
-        })}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+          rehypePlugins={[rehypeKatex]}
+          components={markdownComponents}
+        >
+          {problem.constrains}
+        </ReactMarkdown>
       </section>
 
       <section className="mb-6">
@@ -233,22 +249,6 @@ export default function ProblemViewPage() {
           </button>
         </Link>
       </div>
-
-
-
-    {/*
-      <section className="mb-6">
-        <h2 className="text-lg font-semibold">Testcases (for debugging)</h2>
-        <ul className="list-disc ml-6">
-          {problem.testcases?.map((t, i) => (
-            <li key={i}>
-              <pre className="bg-gray-100 p-2 rounded text-sm mb-1">Input: {JSON.stringify(t.input)}</pre>
-              <pre className="bg-gray-100 p-2 rounded text-sm mb-2">Output: {JSON.stringify(t.output)}</pre>
-            </li>
-          ))}
-        </ul>
-      </section>
-    */}
     </main>
   )
 }
