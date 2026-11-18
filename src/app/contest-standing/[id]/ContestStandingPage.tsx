@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import './cstd.css'
@@ -55,8 +55,8 @@ function formatPenalty(seconds: number): string {
 
 
 export default function ContestStandingPage() {
-  const searchParams = useSearchParams()
-  const contestId = Number(searchParams.get('id'))
+  const searchParams = useParams()
+  const contestId = Number(String(searchParams.id))
   const [standings, setStandings] = useState<Standing[]>([])
   const [problems, setProblems] = useState<{ pid: string; pname: string; score: number }[]>([])
   const [eloMap, setEloMap] = useState<Record<string, number>>({})
@@ -321,7 +321,7 @@ export default function ContestStandingPage() {
       <aside className="w-40 p-4 flex flex-col" style={{ backgroundColor: '#2e2e2e' }}>
         <h2 className="text-lg font-bold mb-4">Contest</h2>
         <Link
-          href={`/contest?id=${contestId}`}
+          href={`/contest/${contestId}`}
           className={styles.cpButton + (pathname === '/contest' ? ' ' + styles.cpButtonActive : '')}
           prefetch={false}
         >
@@ -338,7 +338,7 @@ export default function ContestStandingPage() {
         )}
         {contest && (
           <Link
-            href={`/contest-standing?id=${contest.id}`}
+            href={`/contest-standing/${contest.id}`}
             className={styles.cpButton + (pathname === '/contest-standing' ? ' ' + styles.cpButtonActive : '')}
             prefetch={false}
           >
@@ -382,7 +382,7 @@ export default function ContestStandingPage() {
                 {problems.map((p, idx) => (
                   <th key={idx} className="px-4 py-2 text-center border">
                     <div className="flex flex-col">
-                      <Link href={`/problems?id=${p.pid}`} className="hover:underline text-xl">{p.pname}</Link>
+                      <Link href={`/problems/${p.pid}`} className="hover:underline text-xl">{p.pname}</Link>
                       {p.score !== undefined && (
                         <span className="text-[10px] text-yellow-300 italic">
                           ({p.score})
@@ -432,7 +432,7 @@ export default function ContestStandingPage() {
                         )}`}
                       >
                         <Link
-                          href={`/user?username=${encodeURIComponent(s.user_id)}`}
+                          href={`/user/${encodeURIComponent(s.user_id)}`}
                           className="no-underline hover:underline text-center flex items-center"
                           prefetch={false}
                         >

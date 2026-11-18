@@ -201,7 +201,7 @@ export default function ContestProblemset() {
         <aside className="w-40 p-4 flex flex-col" style={{ backgroundColor: '#2e2e2e' }}>
         <h2 className="text-lg font-bold mb-4">Contest</h2>
         <Link
-          href={`/contest?id=${contestId}`}
+          href={`/contest/${contestId}`}
           className={styles.cpButton + (pathname === '/contest' ? ' ' + styles.cpButtonActive : '')}
           prefetch={false}
         >
@@ -218,7 +218,7 @@ export default function ContestProblemset() {
         )}
         {contest && (
           <Link
-            href={`/contest-standing?id=${contest.id}`}
+            href={`/contest-standing/${contest.id}`}
             className={styles.cpButton + (pathname === '/contest-standing' ? ' ' + styles.cpButtonActive : '')}
             prefetch={false}
           >
@@ -255,7 +255,7 @@ export default function ContestProblemset() {
                         <td>{problem.pname}</td>
                         <td className={getEloClass(problem.difficulty)}>
                           <strong>
-                            <Link href={`/problems?id=${encodeURIComponent(problem.id)}`} prefetch={false}>
+                            <Link href={`/problems/${encodeURIComponent(problem.id)}`} prefetch={false}>
                               {solvedProblems.has(problem.id) && "✅"} {problem.title}
                             </Link>
                           </strong>

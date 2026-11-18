@@ -342,7 +342,7 @@ export default function ProblemsetList() {
           return (
             <Link
               key={problem.id}
-              href={`/problems?id=${encodeURIComponent(problem.id)}`}
+              href={`/problems/${encodeURIComponent(problem.id)}`}
               style={{ textDecoration: 'none', display: 'block' }}
             >
               <div

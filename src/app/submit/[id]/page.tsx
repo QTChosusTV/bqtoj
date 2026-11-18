@@ -3,7 +3,7 @@
 'use client'
 
 import { useAuth } from '@/context/AuthContext'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 
@@ -12,9 +12,9 @@ type UserMetadata = {
 }
 
 function SubmitPageContent() {
-  const searchParams = useSearchParams()
+  const searchParams = useParams()
   const router = useRouter()
-  const problemId = searchParams.get('id')
+  const problemId = String(searchParams.id)
 
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState('cpp')
@@ -48,7 +48,7 @@ function SubmitPageContent() {
         setSubmitting(false)
         return
       }
-      router.push(`/submission?id=${result.id}`)
+      router.push(`/submission/${result.id}`)
     } catch {
       setError('Could not reach the judge')
       setSubmitting(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import Link from 'next/link'
@@ -72,8 +72,8 @@ const markdownComponents = {
 }
 
 export default function ProblemViewPage() {
-  const searchParams = useSearchParams()
-  const id = searchParams.get('id')
+  const searchParams = useParams()
+  const id = String(searchParams.id)
 
   const [problem, setProblem] = useState<Problem | null>(null)
   const [curr_username, setUsername] = useState<string | null>(null)
@@ -243,7 +243,7 @@ export default function ProblemViewPage() {
 
 
       <div className="mt-6">
-        <Link href={`/submit?id=${problem.id}`} prefetch={false}>
+        <Link href={`/submit/${problem.id}`} prefetch={false}>
           <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
             Submit Solution
           </button>

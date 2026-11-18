@@ -84,7 +84,7 @@ function UserMention({ username }: { username: string }) {
 
   return (
     <Link
-      href={`/user?username=${username}`}
+      href={`/user/${username}`}
       className="inline-flex items-center gap-1 hover:underline mb-0.5"
       style={{ color: getEloColor(elo), verticalAlign: "middle" }}
     >

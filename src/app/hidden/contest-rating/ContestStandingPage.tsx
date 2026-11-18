@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import './cstd.css'
@@ -50,8 +50,8 @@ function formatPenalty(seconds: number): string {
 
 
 export default function ContestStandingPage() {
-  const searchParams = useSearchParams()
-  const contestId = Number(searchParams.get('id'))
+  const searchParams = useParams()
+  const contestId = Number(String(searchParams.id))
   const [standings, setStandings] = useState<Standing[]>([])
   const [problems, setProblems] = useState<{ pid: string; pname: string; score: number }[]>([])
   const [eloMap, setEloMap] = useState<Record<string, number>>({})
@@ -324,14 +324,14 @@ export default function ContestStandingPage() {
       {/* Sidebar */}
       <aside className="w-40 bg-gray-800 p-4 flex flex-col">
         <h2 className="text-lg font-bold mb-4">Contest</h2>
-        <Link href={`/contest?id=${contestId}`} className={styles.cpButton} prefetch={false}>Info</Link>
+        <Link href={`/contest/${contestId}`} className={styles.cpButton} prefetch={false}>Info</Link>
           {/*{currUser?.current_contest_id !== 0 && (timeStart <= now) && (now <= timeEnd) && (
             <Link href="/contest-problemset" className={styles.cpButton} prefetch={false}>
               Problems
             </Link>
           )}
           {contest && (
-            <Link href={`/contest-standing?id=${contest.id}`} className={styles.cpButton} prefetch={false}>
+            <Link href={`/contest-standing/${contest.id}`} className={styles.cpButton} prefetch={false}>
               Standing
             </Link>
           )}*/}
@@ -415,7 +415,7 @@ export default function ContestStandingPage() {
                         )}`}
                       >
                         <Link
-                          href={`/user?username=${encodeURIComponent(s.user_id)}`}
+                          href={`/user/${encodeURIComponent(s.user_id)}`}
                           className="no-underline hover:underline text-left"
                           prefetch={false}
                         >

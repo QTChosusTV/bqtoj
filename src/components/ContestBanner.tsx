@@ -126,7 +126,7 @@ export default function ContestBanner() {
 
       {/* Contest name */}
       <Link
-        href={contest.link ?? `/contest-standing?id=${contest.id}`}
+        href={contest.link ?? `/contest-standing/${contest.id}`}
         className="font-semibold text-blue-300 hover:underline"
         prefetch={false}
       >
@@ -157,7 +157,7 @@ export default function ContestBanner() {
 
       {/* View standing link */}
       <Link
-        href={`/contest-standing?id=${contest.id}`}
+        href={`/contest-standing/${contest.id}`}
         className="ml-auto text-xs text-neutral-400 hover:text-white hover:underline"
         prefetch={false}
       >

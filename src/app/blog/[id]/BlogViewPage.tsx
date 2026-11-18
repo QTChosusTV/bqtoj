@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from '@/context/AuthContext'
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { getDisplayedElo } from "@/utils/eloAccumulation"
@@ -30,8 +30,7 @@ interface EloHistoryEntry {
 }
 
 export default function BlogPage() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+  const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [elo, setElo] = useState<number | null>(null);
@@ -106,7 +105,7 @@ export default function BlogPage() {
               className="ml-1"
             ></Image>
             <a
-              href={`/user?username=${post.username}`}
+              href={`/user/${post.username}`}
               className={getEloClass(elo ?? 0) + " mr-1"}
             >
               <strong>{post.username}</strong>

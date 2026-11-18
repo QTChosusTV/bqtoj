@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import Link from 'next/link'
@@ -28,8 +28,8 @@ interface Contest {
 }
 
 export default function ContestPage() {
-  const searchParams = useSearchParams()
-  const contestId = searchParams.get('id')
+  const searchParams = useParams()
+  const contestId = String(searchParams.id)
   const contestIdNum = contestId ? parseInt(contestId, 10) : null
 
   const [contest, setContest] = useState<Contest | null>(null)
@@ -205,7 +205,7 @@ export default function ContestPage() {
         <aside className="w-40 p-4 flex flex-col" style={{ backgroundColor: '#2e2e2e' }}>
         <h2 className="text-lg font-bold mb-4">Contest</h2>
         <Link
-          href={`/contest?id=${contestId}`}
+          href={`/contest/${contestId}`}
           className={styles.cpButton + (pathname === '/contest' ? ' ' + styles.cpButtonActive : '')}
           prefetch={false}
         >
@@ -222,7 +222,7 @@ export default function ContestPage() {
         )}
         {contest && (
           <Link
-            href={`/contest-standing?id=${contest.id}`}
+            href={`/contest-standing/${contest.id}`}
             className={styles.cpButton + (pathname === '/contest-standing' ? ' ' + styles.cpButtonActive : '')}
             prefetch={false}
           >

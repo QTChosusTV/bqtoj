@@ -1,6 +1,6 @@
 // app/submission/SubmissionContent.tsx
 'use client'
-import { useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/context/AuthContext'
@@ -206,8 +206,7 @@ function TestDropdown({ result, isSpecial = false, canViewExpected, isOpen, onTo
 }
 
 function SubmissionContent() {
-  const searchParams = useSearchParams()
-  const submissionId = searchParams.get('id')
+  const { id: submissionId } = useParams<{ id: string }>();
 
   const [submission, setSubmission] = useState<Submission | null>(null)
   const { username, currentContestId, loading: authLoading } = useAuth()

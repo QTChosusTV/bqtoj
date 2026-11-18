@@ -65,7 +65,7 @@ function RankRow({
 }) {
   const eloClass = getEloClass(eloForIcon)
   return (
-    <Link href={`/user?username=${encodeURIComponent(username)}`} prefetch={false} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={`/user/${encodeURIComponent(username)}`} prefetch={false} style={{ textDecoration: 'none', display: 'block' }}>
       <div
         style={{
           display: 'grid',

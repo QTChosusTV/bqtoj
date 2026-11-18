@@ -31,6 +31,53 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@monaco-editor/react"],
   },
+  // inside nextConfig in next.config.ts
+  async redirects() {
+    return [
+      {
+        source: "/problems",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/problems/:id",
+        permanent: true,
+      },
+      {
+        source: "/submit",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/submit/:id",
+        permanent: true,
+      },
+      {
+        source: "/submission",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/submission/:id",
+        permanent: true,
+      },
+      {
+        source: "/contest",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/contest/:id",
+        permanent: true,
+      },
+      {
+        source: "/contest-standing",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/contest-standing/:id",
+        permanent: true,
+      },
+      {
+        source: "/blog",
+        has: [{ type: "query", key: "id", value: "(?<id>.*)" }],
+        destination: "/blog/:id",
+        permanent: true,
+      },
+      {
+        source: "/user",
+        has: [{ type: "query", key: "username", value: "(?<username>.*)" }],
+        destination: "/user/:username",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

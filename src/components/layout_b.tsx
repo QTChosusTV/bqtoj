@@ -13,7 +13,7 @@ export default function AuthButtons() {
   const router = useRouter(); 
 
   const handleProfileClick = () => {
-    router.push(`/user?username=${username}`);
+    router.push(`/user/${username}`);
   };
 
 

@@ -56,7 +56,7 @@ function VerdictBadge({ status }: { status: string }) {
 export default function SubmissionsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const page = parseInt(searchParams.get("page") || "1", 10)
+  const page = Number(searchParams.get("page")) || 1
 
   const [subs, setSubs] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,7 +64,7 @@ export default function SubmissionsPage() {
 
   useEffect(() => {
     router.refresh()
-  }, [page])
+  }, [page, router])
 
   useEffect(() => {
     const loadSubs = async () => {
@@ -74,7 +74,6 @@ export default function SubmissionsPage() {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
 
-      // fetch submissions
       const { data: subsData, error } = await supabase
         .from("public_submissions")
         .select(`
@@ -85,8 +84,7 @@ export default function SubmissionsPage() {
           overall,
           created_at,
           time,
-          memory_kb,
-          created_at
+          memory_kb
         `)
         .order("created_at", { ascending: false })
         .range(from, to)
@@ -97,7 +95,6 @@ export default function SubmissionsPage() {
         return
       }
 
-      // fetch leaderboard elo for all usernames
       const usernames = subsData?.map(s => s.username) || []
       const eloMap: Record<string, number | null> = {}
 
@@ -122,10 +119,9 @@ export default function SubmissionsPage() {
       const problemEloMap: Record<number, number> = {}
 
       if (problemIds.length > 0) {
-        const { data: problemsData, error } = await supabase
+        const { data: problemsData } = await supabase
           .rpc('get_problems_by_ids', { p_ids: problemIds })
 
-        // Cast or type it properly
         const typedProblems = problemsData as Problem[] | null
 
         typedProblems?.forEach(p => {
@@ -140,7 +136,6 @@ export default function SubmissionsPage() {
         title: titleMap[s.problem_id] ?? null,
         problem_elo: problemEloMap[s.problem_id] ?? null,
       }))
-      
 
       setSubs(merged)
       setLoading(false)
@@ -149,38 +144,31 @@ export default function SubmissionsPage() {
     loadSubs()
   }, [page])
 
-  const verdictColor = (status: string) => {
-    switch (status) {
-      case 'Accepted': return 'text-green-400'
-      case 'Wrong Answer': return 'text-red-400'
-      case 'Time Limit Exceeded': return 'text-gray-400'
-      default: return 'text-yellow-400'
-    }
-  }
-
   return (
-    <main >
-      <div style={{fontSize: 15}} className="p-6"> 
-
+    <main>
+      <div style={{ fontSize: 15 }} className="p-6">
         <h1 className="text-2xl font-bold mb-4">Submissions (page {page})</h1>
 
         {loading ? (
           <p className="text-gray-400">Loading...</p>
         ) : (
           <div className="overflow-x-auto max-w-8xl mx-auto">
-  
-          
-
             <div className="flex flex-col gap-2">
               {subs.map(s => {
                 const initials = s.username.slice(0, 2).toUpperCase()
                 const eloClass = s.elo ? getEloClass(s.elo) : ''
                 const ms = Math.floor((s.time ?? 0) * 100000) / 100
-                const timeAgo = /* use a relative time helper or just the locale string */
-                  new Date(s.created_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: true })
+                const timeAgo = new Date(s.created_at).toLocaleString("vi-VN", {
+                  timeZone: "Asia/Ho_Chi_Minh",
+                  hour12: true,
+                })
 
                 return (
-                  <div key={s.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors" style={{fontSize: 14, backgroundColor: "#111111"}}>
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors"
+                    style={{ fontSize: 14, backgroundColor: "#111111" }}
+                  >
                     {/* Avatar */}
                     <div className="relative w-9 h-9 shrink-0">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium bg-blue-950 text-blue-300">
@@ -198,11 +186,13 @@ export default function SubmissionsPage() {
                           height={25}
                           className="shrink-0"
                         />
-                        <Link href={`/user?username=${s.username}`} prefetch={false}>
-                          <span className={`font-medium hover:underline cursor-pointer ${eloClass}`}>{s.username}</span>
+                        <Link href={`/user/${s.username}`} prefetch={false}>
+                          <span className={`font-medium hover:underline cursor-pointer ${eloClass}`}>
+                            {s.username}
+                          </span>
                         </Link>
                         <span className="text-gray-600">·</span>
-                        <Link href={`/problems?id=${s.problem_id}`} prefetch={false}>
+                        <Link href={`/problems/${s.problem_id}`} prefetch={false}>
                           <span
                             className="hover:underline cursor-pointer font-bold text-md"
                             style={{ color: getEloColor(s.problem_elo ?? 0) }}
@@ -213,20 +203,28 @@ export default function SubmissionsPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <VerdictBadge status={s.overall} />
-                        <span className="text-sm px-2 py-0.5 rounded-full border border-gray-500 text-gray-100">{s.language}</span>
-                        <span className="text-sm px-2 py-0.5 rounded-full border border-gray-500 text-gray-100">{timeAgo}</span>
+                        <span className="text-sm px-2 py-0.5 rounded-full border border-gray-500 text-gray-100">
+                          {s.language}
+                        </span>
+                        <span className="text-sm px-2 py-0.5 rounded-full border border-gray-500 text-gray-100">
+                          {timeAgo}
+                        </span>
                       </div>
                     </div>
 
                     {/* Performance stats */}
                     <div className="flex flex-col items-end shrink-0 gap-0.5">
-                      <span className="text-sm font-medium tabular-nums text-gray-200">{s.time ? `${ms} ms` : '—'}</span>
+                      <span className="text-sm font-medium tabular-nums text-gray-200">
+                        {s.time ? `${ms} ms` : '—'}
+                      </span>
                     </div>
 
                     {/* Action */}
                     {s.username === username ? (
-                      <Link href={`/submission?id=${s.id}`} prefetch={false}>
-                        <span className="text-xs text-blue-400 hover:underline cursor-pointer ml-2 shrink-0">View ↗</span>
+                      <Link href={`/submission/${s.id}`} prefetch={false}>
+                        <span className="text-xs text-blue-400 hover:underline cursor-pointer ml-2 shrink-0">
+                          View ↗
+                        </span>
                       </Link>
                     ) : (
                       <span className="text-xs text-gray-700 ml-2 shrink-0">Locked</span>
@@ -254,7 +252,6 @@ export default function SubmissionsPage() {
             Next
           </button>
         </div>
-        
       </div>
     </main>
   )

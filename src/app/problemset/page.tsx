@@ -229,7 +229,7 @@ export default function ProblemsetList() {
             const hoverBg = hexToRgba(getEloColor(problem.difficulty), 0.3)
 
             return (
-              <Link key={problem.id} href={`/problems?id=${encodeURIComponent(problem.id)}`} className="block">
+              <Link key={problem.id} href={`/problems/${encodeURIComponent(problem.id)}`} className="block">
                 <div
                   className="flex flex-col md:flex-row md:justify-between border p-5 bg-gray-800 hover:shadow-lg transition-colors duration-200"
                   style={{ backgroundColor: baseBg }}

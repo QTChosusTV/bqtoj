@@ -248,7 +248,7 @@ export default function LeaderboardPage() {
                     <td style={{ textAlign: 'center', width: '10  0px', marginLeft: '50px', marginRight: '50px'}}>{rank}</td>
                     <td className={usernameClassList}>
                       <Link
-                        href={`/user?username=${encodeURIComponent(user.username)}`}
+                        href={`/user/${encodeURIComponent(user.username)}`}
                         className={usernameClassList}
                         style={{ display: 'flex', alignItems: 'center' }}
                         prefetch={false}
