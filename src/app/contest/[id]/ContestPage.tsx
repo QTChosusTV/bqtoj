@@ -53,7 +53,7 @@ export default function ContestPage() {
       const { data: userData, error } = await supabase
         .from("users")
         .select("id, username, current_contest_id")
-        .eq("email", user.email)
+        .eq("id", user.id)
         .single()
       if (error) console.error("Error fetching user:", error)
 
@@ -116,28 +116,22 @@ export default function ContestPage() {
         return
       }
 
-      // console.log('currUser before update:', currUser)
-      // console.log('contest before update:', contest)
-      // console.log('contest id update:', contestIdSafe)
-
-      const { data: updatedUser, error } = await supabase
-        .from('users')
-        .update({ current_contest_id: contestIdSafe })
-        .eq('id', currUser.id)  
-        .select()
-        .single()
+      const { error } = await supabase.rpc('join_contest', {
+        p_contest_id: contestIdSafe,
+      })
 
       if (error) {
         console.error('Error updating current_contest_id:', error)
         return
       }
 
-      setCurrUser((prev: any) => ({ ...(prev ?? {}), ...updatedUser }))
+      setCurrUser((prev: any) => ({
+        ...(prev ?? {}),
+        current_contest_id: contestIdSafe,
+      }))
 
       if (now >= timeStart && now <= timeEnd) {
         router.push('/contest-problemset')
-      } else {
-        // ('Registered for contest', contestIdSafe)
       }
     } catch (err) {
       console.error('handleClick error', err)
@@ -206,7 +200,7 @@ export default function ContestPage() {
         <h2 className="text-lg font-bold mb-4">Contest</h2>
         <Link
           href={`/contest/${contestId}`}
-          className={styles.cpButton + (pathname === '/contest' ? ' ' + styles.cpButtonActive : '')}
+          className={styles.cpButton + (pathname.startsWith('/contest/') ? ' ' + styles.cpButtonActive : '')}
           prefetch={false}
         >
           Info
@@ -223,7 +217,7 @@ export default function ContestPage() {
         {contest && (
           <Link
             href={`/contest-standing/${contest.id}`}
-            className={styles.cpButton + (pathname === '/contest-standing' ? ' ' + styles.cpButtonActive : '')}
+            className={styles.cpButton + (pathname.startsWith('/contest-standing/') ? ' ' + styles.cpButtonActive : '')}
             prefetch={false}
           >
             Standing
